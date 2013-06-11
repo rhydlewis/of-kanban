@@ -58,7 +58,7 @@ class OFKanban
         puts "due date is #{@options.due_date}"
       end
       opts.on('-c', '--clear-board', 'Remove all cards from Lean Kit board') { @options.clear = true }
-      # opts.on('-f', '--flagged', 'Sync flagged and available tasks') { @options.flagged = true }
+      opts.on('-f', '--flagged', 'Sync flagged and available tasks') { @options.flagged = true }
       opts.on('-h', '--help', 'Display this screen' ) do
         puts opts
         puts
@@ -84,6 +84,10 @@ class OFKanban
         tasks.concat(task_man.tasks_due_by(@options.due_date))
       end
 
+      if (@options.flagged)
+        tasks.concat(task_man.flagged_tasks())
+      end
+
       if (tasks.size > 0)
         puts "Syncing #{tasks.size.to_s} cards to Kanban board"
         board.add_cards(tasks)
@@ -99,10 +103,10 @@ class OFKanban
 
     def parse_date(datestring)
       days = 0
-      if datestring =~ /^\+(\d+)$/
+      if datestring =~ /^\+(\d+)d$/
         days = (60 * 60 * 24 * $1.to_i)
         newdate = Time.now + days
-      elsif datestring =~ /^\+(\w+)$/
+      elsif datestring =~ /^\+(\w+)w$/
         days = (7 * 60 * 60 * 24 * $1.to_i)
         newdate = Time.now + days
       else

@@ -8,6 +8,19 @@ class TaskManager
       @omnifocus = OmniFocus.new()
     end
 
+    def flagged_tasks()
+      tasks = []
+      @omnifocus.all_tasks().each { |task|
+        next if (task.completed.get)
+
+        if (task.flagged.get)
+          tasks << task
+        end
+      }
+
+      return tasks
+    end
+
     def tasks_due_by(horizon)
       tasks = []
       @omnifocus.all_tasks().each { |task|
