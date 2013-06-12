@@ -3,8 +3,7 @@ require 'yaml'
 require 'json'
 require 'date'
 
-$: << File.join(File.dirname(__FILE__), "/../../leankitkanban/lib")
-
+# $: << File.join(File.dirname(__FILE__), "/../../leankitkanban/lib")
 require 'leankitkanban'
 
 #mark-off all tasks in OmniFocus as done which have been moved to the 'Done' column in my LeanKit KanBan board.
@@ -14,11 +13,13 @@ class KanbanBoard
   EXTERNAL_CARD_ID = "ExternalCardID"
 
   def initialize()
-    config = YAML.load_file(ENV['HOME'] + "/.leankit-config.yaml")
+    config = load_config()
     LeanKitKanban::Config.email = config["email"]
     LeanKitKanban::Config.password = config["password"]
     LeanKitKanban::Config.account = config["account"]
     @board_id = config["board_id"]
+    @type = config["type"] # TODO - don't do this
+    @lane_id = config["backlog_lane_id"] # TODO - don't do this
   end
 
   def read_board()
@@ -35,14 +36,11 @@ class KanbanBoard
   end
 
   def add_cards(tasks)
-    type = 31854214 # hard coding this for now
-    lane_id = 31854083 # hard coding this for now
-
     existing_cards = read_board()
     cards = []
     tasks.each { |t|
       task = task_to_hash(t)
-      card = { "LaneId" => lane_id, "Title" => task[:name], "TypeId" => type,
+      card = { "LaneId" => @lane_id, "Title" => task[:name], "TypeId" => @type,
         "Tags" => task[:context], EXTERNAL_CARD_ID => task[:external_id] }
 
       if (existing_cards.include?(card[EXTERNAL_CARD_ID]))
@@ -76,4 +74,28 @@ class KanbanBoard
     lane["Cards"].each { |card| card_ids << card["Id"] }
     LeanKitKanban::Card.delete_multiple(@board_id, card_ids)
   end
+
+  protected
+
+  def load_config()
+    path = ENV['HOME'] + "/.leankit-config.yaml"
+    config = YAML.load_file(path) rescue nil
+
+    unless config then
+      config = { :email => "Your LeanKit username", :password => "Your LeanKit password",
+        :account => "Your LeanKit account name",
+        :board => "Your LeanKit board ID (copy it from https://<account>.leankit.com/boards/view/<board>)" }
+        # :account => ["Done", "Deployed", "Finished", "Cards in these boards are considered done, you add and remove names to fit your workflow."] }
+
+      File.open(path, "w") { |f|
+        YAML.dump(config, f)
+      }
+
+      abort "Created default LeanKit config in #{path}. Please complete this before re-running of-kanban"
+    end
+
+    return config
+  end
+
+
 end
