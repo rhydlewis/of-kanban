@@ -75,6 +75,10 @@ class KanbanBoard
     LeanKitKanban::Card.delete_multiple(@board_id, card_ids)
   end
 
+  def get_identifiers
+    LeanKitKanban::Board.get_identifiers(@board_id)
+  end
+
   protected
 
   def load_config()
@@ -96,6 +100,7 @@ class KanbanBoard
 
     return config
   end
-
-
 end
+
+# board = KanbanBoard.new()
+# puts board.get_identifiers().to_json()
