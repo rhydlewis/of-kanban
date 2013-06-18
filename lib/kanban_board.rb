@@ -19,7 +19,7 @@ class KanbanBoard
     LeanKitKanban::Config.account = config["account"]
     @board_id = config["board_id"]
     @type = config["type"] # TODO - don't do this
-    @lane_id = config["backlog_lane_id"] # TODO - don't do this
+    @lane_id = get_backlog_id(config["backlog_lane_id"]) # TODO - don't do this
   end
 
   def read_board()
@@ -64,7 +64,6 @@ class KanbanBoard
   def clear_board()
     puts "Clearing board..."
     board = LeanKitKanban::Board.find(@board_id)[0]
-
     board["Lanes"].each { |lane| clear_lane(lane) }
     board["Backlog"].each { |lane| clear_lane(lane) }
   end
@@ -99,6 +98,15 @@ class KanbanBoard
     end
 
     return config
+  end
+
+  def get_backlog_id(id)
+    if (id == nil)
+      board = LeanKitKanban::Board.find(@board_id)[0]
+      puts "No backlog ID specified, looking for default"
+      id = board["Backlog"][0]["Id"]
+    end
+    return id
   end
 end
 
