@@ -12,6 +12,8 @@ class KanbanBoard
 
   EXTERNAL_CARD_ID = "ExternalCardID"
 
+  attr_reader :url
+
   def initialize()
     config = load_config()
     LeanKitKanban::Config.email = config["email"]
@@ -20,18 +22,21 @@ class KanbanBoard
     @board_id = config["board_id"]
     @type = config["type"] # TODO - don't do this
     @lane_id = get_backlog_id(config["backlog_lane_id"]) # TODO - don't do this
+    @url = config["board_url"]
   end
 
   def read_board()
-    lanes = LeanKitKanban::Board.find(@board_id)[0]["Lanes"]
     existing_cards = []
 
-    lanes.each { |lane|
-      lane["Cards"].each { |card|
-        existing_cards << card["ExternalCardID"]
-        puts "Found " + card["ExternalCardID"].to_s
-      }
-    }
+    board = LeanKitKanban::Board.find(@board_id)[0]
+
+    puts "Looking for cards in board lanes"
+    lanes = board["Lanes"]
+    lanes.each { |lane| existing_cards << read_lane(lane) }
+    puts "Looking for cards in backlog"
+    existing_cards << read_lane(board["Backlog"][0])
+    puts "Looking for cards in archive"
+    existing_cards << read_lane(board["Archive"][0])
     return existing_cards
   end
 
@@ -78,7 +83,24 @@ class KanbanBoard
     LeanKitKanban::Board.get_identifiers(@board_id)
   end
 
+  def to_json
+    LeanKitKanban::Board.find(@board_id).to_json
+  end
+
   protected
+
+  def read_lane(json)
+    lane_title = json["Title"]
+    found_cards = []
+    cards = json["Cards"]
+    cards.each { |card|
+      found_cards << card["ExternalCardID"]
+      # puts "Found " + card["ExternalCardID"].to_s + " in #{lane_title}"
+    }
+
+    puts "Found #{found_cards.size.to_s} cards  in #{lane_title}"
+    return cards
+  end
 
   def load_config()
     path = ENV['HOME'] + "/.leankit-config.yaml"
