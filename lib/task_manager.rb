@@ -2,15 +2,16 @@ require 'omnifocus'
 
 class TaskManager
 
-    attr_reader :omnifocus
+    attr_reader :omnifocus, :all_tasks
 
     def initialize()
       @omnifocus = OmniFocus.new()
+      @all_tasks = @omnifocus.all_tasks()
     end
 
     def flagged_tasks()
       tasks = []
-      @omnifocus.all_tasks().each { |task|
+      @all_tasks.each { |task|
         next if (task.completed.get)
 
         if (task.flagged.get)
@@ -23,7 +24,7 @@ class TaskManager
 
     def tasks_due_by(horizon)
       tasks = []
-      @omnifocus.all_tasks().each { |task|
+      @all_tasks.each { |task|
         next if (task.completed.get)
 
         due_date = parse_date(task.due_date.get)
@@ -46,5 +47,19 @@ class TaskManager
         val = nil
       end
       return val
+    end
+
+    def close_tasks(ids)
+      @to_close = @all_tasks.select { |task|
+        ids.include?(task.id_.get) && !task.completed.get
+      }
+
+      puts "Closing #{@to_close.size.to_s}"
+      @to_close.each { |task|
+        id = task.id_.get
+        name = task.name.get
+        puts "Closing task #{id}::#{name}"
+        task.completed.set true
+      }
     end
 end

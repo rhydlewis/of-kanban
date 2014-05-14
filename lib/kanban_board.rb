@@ -19,6 +19,7 @@ class KanbanBoard
   DUE_DATE = "DueDate"
   START_DATE = "StartDate"
   DESCRIPTION = "Description"
+  COMPLETED = "Completed"
 
   attr_reader :url, :cards
 
@@ -29,12 +30,14 @@ class KanbanBoard
     LeanKitKanban::Config.account = config["account"]
     @board_id = config["board_id"]
     @types = config["card_types"]
+    @completed_lanes = config["completed_lanes"]
     @lane_id = get_backlog_id(config["backlog_lane_id"]) # TODO - don't do this
     @url = config["board_url"]
   end
 
   def read_board()
     @cards = []
+    completed_ids = []
 
     backlog = []
     archive = []
@@ -56,10 +59,14 @@ class KanbanBoard
     @cards.concat(archive)
     # puts "Found #{@cards.size.to_s} cards on board"
 
+    completed_cards = @cards.select { |c| c[COMPLETED] == true && c[EXTERNAL_CARD_ID] != "" }
+    puts "Found #{completed_cards.size.to_s} completed cards out of #{@cards.size.to_s} on board"
+    completed_cards.each { |c| completed_ids << c[EXTERNAL_CARD_ID] }
+
+    return completed_ids
   end
 
   def add_cards(tasks)
-    read_board()
     new_cards = []
 
     ignored_cards = 0
@@ -138,14 +145,15 @@ class KanbanBoard
     found_cards = []
     cards = json["Cards"]
     cards.each { |card|
-      id = card["ExternalCardID"]
-      title = card["Title"]
-      found_cards << { EXTERNAL_CARD_ID => id, TITLE => title}
-      # puts "\tFound #{id}::#{title} in #{lane_title}"
+      id = card[EXTERNAL_CARD_ID]
+      title = card[TITLE]
+      done = @completed_lanes.include?(card[LANE_ID])
+      found_cards << { EXTERNAL_CARD_ID => id, TITLE => title, COMPLETED => done}
+      # puts "\tFound #{id}::#{title} in #{lane_title}. Is card done? #{done}"
     }
 
     # puts "Found #{found_cards.size.to_s} cards  in #{lane_title}"
-    return cards
+    return found_cards
   end
 
   def load_config()
