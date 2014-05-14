@@ -18,6 +18,7 @@ class KanbanBoard
   PRIORITY = "Priority"
   DUE_DATE = "DueDate"
   START_DATE = "StartDate"
+  DESCRIPTION = "Description"
 
   attr_reader :url, :cards
 
@@ -67,7 +68,8 @@ class KanbanBoard
       task = task_to_hash(t)
       context = @types[task[:context]]
       card = { LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
-        EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date], START_DATE => task[:start_date] }
+        EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date],
+        START_DATE => task[:start_date], DESCRIPTION => task[:note] }
 
       if (card_exists_on_board?(card))
         # puts "Ignoring pre-existing card " + task[:name]
@@ -96,7 +98,8 @@ class KanbanBoard
     due_date = parse_date(task.due_date)
     start_date = parse_date(task.defer_date)
 
-    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date }
+    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date,
+      :note => task.note.get }
   end
 
   def clear_board()

@@ -60,6 +60,7 @@ class OFKanban
       opts.on('-c', '--clear-board', 'Remove all cards from Lean Kit board') { @options.clear = true }
       opts.on('-f', '--flagged', 'Sync flagged and available tasks') { @options.flagged = true }
       opts.on('-o', '--open-board', 'Open the kanban board') { @options.open = true }
+      # opts.on('-d', '--done', 'Update OmniFocus with done cards from Kanban board') { @options.done = true }
       opts.on('-h', '--help', 'Display this screen' ) do
         puts opts
         puts
