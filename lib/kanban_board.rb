@@ -96,7 +96,7 @@ class KanbanBoard
     due_date = parse_date(task.due_date)
     start_date = parse_date(task.defer_date)
 
-    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_dateka }
+    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date }
   end
 
   def clear_board()
