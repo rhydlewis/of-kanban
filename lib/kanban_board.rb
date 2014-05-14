@@ -11,8 +11,15 @@ require 'leankitkanban'
 class KanbanBoard
 
   EXTERNAL_CARD_ID = "ExternalCardID"
+  TITLE = "Title"
+  LANE_ID = "LaneId"
+  TYPE_ID = "TypeId"
+  TAGS = "Tags"
+  PRIORITY = "Priority"
+  DUE_DATE = "DueDate"
+  START_DATE = "StartDate"
 
-  attr_reader :url
+  attr_reader :url, :cards
 
   def initialize()
     config = load_config()
@@ -20,50 +27,76 @@ class KanbanBoard
     LeanKitKanban::Config.password = config["password"]
     LeanKitKanban::Config.account = config["account"]
     @board_id = config["board_id"]
-    @type = config["type"] # TODO - don't do this
+    @types = config["card_types"]
     @lane_id = get_backlog_id(config["backlog_lane_id"]) # TODO - don't do this
     @url = config["board_url"]
   end
 
   def read_board()
-    existing_cards = []
+    @cards = []
+
+    backlog = []
+    archive = []
+    in_progress = []
 
     board = LeanKitKanban::Board.find(@board_id)[0]
-
-    puts "Looking for cards in board lanes"
+    # puts "Looking for cards in board lanes"
     lanes = board["Lanes"]
-    lanes.each { |lane| existing_cards << read_lane(lane) }
-    puts "Looking for cards in backlog"
-    existing_cards << read_lane(board["Backlog"][0])
-    puts "Looking for cards in archive"
-    existing_cards << read_lane(board["Archive"][0])
-    return existing_cards
+    lanes.each { |lane| in_progress.concat(read_lane(lane)) }
+    # puts "Looking for cards in backlog"
+    backlog.concat(read_lane(board["Backlog"][0]))
+    # puts "Looking for cards in archive"
+    archive.concat(read_lane(board["Archive"][0]))
+
+    @cards.concat(backlog)
+    # puts "Found #{@cards.size.to_s} cards in backlog"
+    @cards.concat(in_progress)
+    # puts "Found #{@cards.size.to_s} cards in backlog and in progress"
+    @cards.concat(archive)
+    # puts "Found #{@cards.size.to_s} cards on board"
+
   end
 
   def add_cards(tasks)
-    existing_cards = read_board()
-    cards = []
+    read_board()
+    new_cards = []
+
+    ignored_cards = 0
+
     tasks.each { |t|
       task = task_to_hash(t)
-      card = { "LaneId" => @lane_id, "Title" => task[:name], "TypeId" => @type,
-        "Tags" => task[:context], EXTERNAL_CARD_ID => task[:external_id] }
+      context = @types[task[:context]]
+      card = { LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
+        EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date], START_DATE => task[:start_date] }
 
-      if (existing_cards.include?(card[EXTERNAL_CARD_ID]))
-        puts "Ignoring pre-existing card " + task[:name]
+      if (card_exists_on_board?(card))
+        # puts "Ignoring pre-existing card " + task[:name]
+        ignored_cards = ignored_cards + 1
       else
-        puts "Adding " + card.inspect
-        cards << card
+        # puts "Adding #{card[TITLE]} as type " + @types.key(context)
+        # puts "\t#{card.inspect}"
+        new_cards << card
       end
     }
 
-    if (cards.length > 0)
-      reply = LeanKitKanban::Card.add_multiple(@board_id, "updating from omnifocus", cards)
-      puts reply
+    puts "Found #{new_cards.size.to_s} cards to sync (ignoring #{ignored_cards} already on board)"
+
+    # puts "---"
+    # puts new_cards.to_json
+    # puts "---"
+
+    if (new_cards.length > 0)
+      reply = LeanKitKanban::Card.add_multiple(@board_id, "Imported from OmniFocus", new_cards)
+      # puts "RESPONSE\n\t#{reply}"
     end
   end
 
   def task_to_hash(task)
-    {:name => task.name.get, :external_id => task.id_.get, :context => task.context.get }
+    name = task.name.get
+    due_date = parse_date(task.due_date)
+    start_date = parse_date(task.defer_date)
+
+    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_dateka }
   end
 
   def clear_board()
@@ -75,8 +108,16 @@ class KanbanBoard
 
   def clear_lane(lane)
     card_ids = []
-    lane["Cards"].each { |card| card_ids << card["Id"] }
-    LeanKitKanban::Card.delete_multiple(@board_id, card_ids)
+    lane["Cards"].each { |card|
+      title = card[TITLE]
+      if (card[EXTERNAL_CARD_ID] != "")
+        puts "removing card #{title}"
+        card_ids << card["Id"]
+      else
+        puts "ignoring non-omnifocus card #{title}"
+      end
+    }
+    # LeanKitKanban::Card.delete_multiple(@board_id, card_ids)
   end
 
   def get_identifiers
@@ -90,15 +131,17 @@ class KanbanBoard
   protected
 
   def read_lane(json)
-    lane_title = json["Title"]
+    lane_title = json[TITLE]
     found_cards = []
     cards = json["Cards"]
     cards.each { |card|
-      found_cards << card["ExternalCardID"]
-      # puts "Found " + card["ExternalCardID"].to_s + " in #{lane_title}"
+      id = card["ExternalCardID"]
+      title = card["Title"]
+      found_cards << { EXTERNAL_CARD_ID => id, TITLE => title}
+      # puts "\tFound #{id}::#{title} in #{lane_title}"
     }
 
-    puts "Found #{found_cards.size.to_s} cards  in #{lane_title}"
+    # puts "Found #{found_cards.size.to_s} cards  in #{lane_title}"
     return cards
   end
 
@@ -122,6 +165,16 @@ class KanbanBoard
     return config
   end
 
+  def card_exists_on_board?(card)
+    title = card[TITLE]
+    id = card[EXTERNAL_CARD_ID]
+
+    title_match = false #(@cards.detect { |c| c[TITLE] == title } != nil)
+    id_match = (@cards.detect { |c| c[EXTERNAL_CARD_ID] == id } != nil)
+
+    return (title_match || id_match)
+  end
+
   def get_backlog_id(id)
     if (id == nil)
       board = LeanKitKanban::Board.find(@board_id)[0]
@@ -130,7 +183,12 @@ class KanbanBoard
     end
     return id
   end
-end
 
-# board = KanbanBoard.new()
-# puts board.get_identifiers().to_json()
+  def parse_date(d)
+    date = nil
+    if (d.get != :missing_value)
+      date = Date.parse(d.get.to_s).strftime("%d/%m/%Y")
+    end
+    return date
+  end
+end

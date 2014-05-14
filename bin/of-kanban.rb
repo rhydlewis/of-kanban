@@ -96,7 +96,7 @@ class OFKanban
       end
 
       if (tasks.size > 0)
-        puts "Syncing #{tasks.size.to_s} cards to Kanban board"
+        puts "Found #{tasks.size.to_s} cards eligible for syncing with Kanban board"
         board.add_cards(tasks)
       end
     end
