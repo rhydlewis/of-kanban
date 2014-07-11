@@ -90,9 +90,9 @@ class KanbanBoard
 
     puts "Found #{new_cards.size.to_s} cards to sync (ignoring #{ignored_cards} already on board)"
 
-    # puts "---"
-    # puts new_cards.to_json
-    # puts "---"
+    puts "---"
+    puts new_cards.to_json
+    puts "---"
 
     if (new_cards.length > 0)
       reply = LeanKitKanban::Card.add_multiple(@board_id, "Imported from OmniFocus", new_cards)
