@@ -54,12 +54,16 @@ class TaskManager
         ids.include?(task.id_.get) && !task.completed.get
       }
 
-      puts "Closing #{@to_close.size.to_s}"
-      @to_close.each { |task|
-        id = task.id_.get
-        name = task.name.get
-        puts "Closing task #{id}::#{name}"
-        task.completed.set true
-      }
+      closable = @to_close.size
+
+      if (closable > 0)
+        puts "Closing #{closable.to_s} cards"
+        @to_close.each { |task|
+          id = task.id_.get
+          name = task.name.get
+          puts "Closing task #{id}::#{name}"
+          task.completed.set true
+        }
+      end
     end
 end

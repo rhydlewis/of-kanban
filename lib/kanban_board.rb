@@ -60,7 +60,7 @@ class KanbanBoard
     # puts "Found #{@cards.size.to_s} cards on board"
 
     completed_cards = @cards.select { |c| c[COMPLETED] == true && c[EXTERNAL_CARD_ID] != "" }
-    puts "Found #{completed_cards.size.to_s} completed cards out of #{@cards.size.to_s} on board"
+    # puts "Found #{completed_cards.size.to_s} completed cards out of #{@cards.size.to_s} on board"
     completed_cards.each { |c| completed_ids << c[EXTERNAL_CARD_ID] }
 
     return completed_ids
@@ -69,18 +69,23 @@ class KanbanBoard
   def add_cards(tasks)
     new_cards = []
 
-    ignored_cards = 0
+    presynced_cards = 0
+    deferred_cards = 0
 
     tasks.each { |t|
       task = task_to_hash(t)
+      start_date = task[:start_date]
       context = @types[task[:context]]
       card = { LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
         EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date],
-        START_DATE => task[:start_date], DESCRIPTION => task[:note] }
+        START_DATE => start_date, DESCRIPTION => task[:note] }
 
       if (card_exists_on_board?(card))
         # puts "Ignoring pre-existing card " + task[:name]
-        ignored_cards = ignored_cards + 1
+        presynced_cards = presynced_cards + 1
+      elsif (start_date != nil && Date.parse(start_date) >= Date.today)
+        puts "Ignoring card " + task[:name] + ". Deferred until " + start_date
+        deferred_cards = deferred_cards + 1
       else
         # puts "Adding #{card[TITLE]} as type " + @types.key(context)
         # puts "\t#{card.inspect}"
@@ -88,13 +93,13 @@ class KanbanBoard
       end
     }
 
-    puts "Found #{new_cards.size.to_s} cards to sync (ignoring #{ignored_cards} already on board)"
-
-    puts "---"
-    puts new_cards.to_json
-    puts "---"
+    puts "Found #{new_cards.size.to_s} cards to sync (ignoring #{presynced_cards} already on board and #{deferred_cards} deferred)"
 
     if (new_cards.length > 0)
+      puts "---"
+      puts new_cards.to_json
+      puts "---"
+
       reply = LeanKitKanban::Card.add_multiple(@board_id, "Imported from OmniFocus", new_cards)
       # puts "RESPONSE\n\t#{reply}"
     end
@@ -110,10 +115,10 @@ class KanbanBoard
   end
 
   def clear_board()
-    puts "Clearing board..."
-    board = LeanKitKanban::Board.find(@board_id)[0]
-    board["Lanes"].each { |lane| clear_lane(lane) }
-    board["Backlog"].each { |lane| clear_lane(lane) }
+    # puts "Clearing board..."
+    # board = LeanKitKanban::Board.find(@board_id)[0]
+    # board["Lanes"].each { |lane| clear_lane(lane) }
+    # board["Backlog"].each { |lane| clear_lane(lane) }
   end
 
   def clear_lane(lane)
