@@ -83,7 +83,7 @@ class KanbanBoard
       if (card_exists_on_board?(card))
         # puts "Ignoring pre-existing card " + task[:name]
         presynced_cards = presynced_cards + 1
-      elsif (start_date != nil && Date.parse(start_date) >= Date.today)
+      elsif (start_date != nil && Date.parse(start_date) > Date.today)
         puts "Ignoring card " + task[:name] + ". Deferred until " + start_date
         deferred_cards = deferred_cards + 1
       else
