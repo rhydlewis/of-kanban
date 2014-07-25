@@ -72,8 +72,7 @@ class KanbanBoard
     presynced_cards = 0
     deferred_cards = 0
 
-    tasks.each { |t|
-      task = task_to_hash(t)
+    tasks.each { |task|
       start_date = task[:start_date]
       context = @types[task[:context]]
       card = { LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
@@ -103,15 +102,6 @@ class KanbanBoard
       reply = LeanKitKanban::Card.add_multiple(@board_id, "Imported from OmniFocus", new_cards)
       # puts "RESPONSE\n\t#{reply}"
     end
-  end
-
-  def task_to_hash(task)
-    name = task.name.get
-    due_date = parse_date(task.due_date)
-    start_date = parse_date(task.defer_date)
-
-    {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date,
-      :note => task.note.get }
   end
 
   def clear_board()
@@ -198,13 +188,5 @@ class KanbanBoard
       id = board["Backlog"][0]["Id"]
     end
     return id
-  end
-
-  def parse_date(d)
-    date = nil
-    if (d.get != :missing_value)
-      date = Date.parse(d.get.to_s).strftime("%d/%m/%Y")
-    end
-    return date
   end
 end
