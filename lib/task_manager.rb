@@ -60,12 +60,18 @@ class TaskManager
   end
 
   def to_hash(task)
-    name = task.name.get
+    name = get_text(task.name)
+    note = get_text(task.note)
     due_date = ofdate_to_string(task.due_date)
     start_date = ofdate_to_string(task.defer_date)
 
     {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date,
-      :note => task.note.get }
+      :note => note }
+  end
+
+  def get_text(item)
+    t = item.get
+    t.force_encoding("UTF-8").encode("UTF-8")
   end
 
   def ofdate_to_string(d)
