@@ -5,8 +5,8 @@ class TaskManager
   attr_reader :omnifocus, :all_tasks
 
   def initialize()
-    @omnifocus = OmniFocus.new()
-    @all_tasks = @omnifocus.all_tasks()
+    @omnifocus = OmniFocus.new
+    @all_tasks = @omnifocus.all_tasks
   end
 
   def flagged_tasks()
@@ -14,12 +14,12 @@ class TaskManager
     @all_tasks.each { |task|
       next if (task.completed.get)
 
-      if (task.flagged.get)
+      if task.flagged.get
         tasks << to_hash(task)
       end
     }
 
-    return tasks
+    tasks
   end
 
   def tasks_due_by(horizon)
@@ -29,16 +29,16 @@ class TaskManager
 
       due_date = ofdate_to_date(task.due_date)
 
-      if (due_date != nil)
+      if due_date != nil
         comparison = horizon <=> due_date
         # puts "comparison = horizon <=> due_date:  #{comparison} = #{horizon} <=> #{due_date}"
-        if (horizon == nil || comparison > -1)
+        if horizon == nil || comparison > -1
           # puts "comparison = horizon <=> due_date:           #{comparison} = #{horizon} <=> #{due_date}"
           tasks << to_hash(task)
         end
       end
     }
-    return tasks
+    tasks
   end
 
   def close_tasks(ids)
@@ -48,7 +48,7 @@ class TaskManager
 
     closable = @to_close.size
 
-    if (closable > 0)
+    if closable > 0
       puts "Closing #{closable.to_s} cards"
       @to_close.each { |task|
         id = task.id_.get
@@ -66,7 +66,7 @@ class TaskManager
     start_date = ofdate_to_string(task.defer_date)
 
     {:name => name, :external_id => task.id_.get, :context => task.context.name.get, :due_date => due_date, :start_date => start_date,
-      :note => note }
+     :note => note}
   end
 
   def get_text(item)
@@ -76,27 +76,26 @@ class TaskManager
 
   def ofdate_to_string(d)
     date = nil
-    if (d.get != :missing_value)
+    if d.get != :missing_value
       date = Date.parse(d.get.to_s).strftime("%d/%m/%Y")
     end
-    return date
+    date
   end
 
   def ofdate_to_date(d)
     date = nil
-    if (d.get != :missing_value)
+    if d.get != :missing_value
       date = Date.parse(d.get.to_s)
     end
-    return date
+    date
   end
 
   def parse_date(date)
-    if (date != :missing_value && date != nil)
+    if date != :missing_value && date != nil
       val = Date.parse(date.strftime('%Y/%m/%d'))
     else
       val = nil
     end
-    return val
+    val
   end
-
 end

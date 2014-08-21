@@ -10,29 +10,29 @@ require 'leankitkanban'
 
 class KanbanBoard
 
-  EXTERNAL_CARD_ID = "ExternalCardID"
-  TITLE = "Title"
-  LANE_ID = "LaneId"
-  TYPE_ID = "TypeId"
-  TAGS = "Tags"
-  PRIORITY = "Priority"
-  DUE_DATE = "DueDate"
-  START_DATE = "StartDate"
-  DESCRIPTION = "Description"
-  COMPLETED = "Completed"
+  EXTERNAL_CARD_ID = 'ExternalCardID'
+  TITLE = 'Title'
+  LANE_ID = 'LaneId'
+  TYPE_ID = 'TypeId'
+  TAGS = 'Tags'
+  PRIORITY = 'Priority'
+  DUE_DATE = 'DueDate'
+  START_DATE = 'StartDate'
+  DESCRIPTION = 'Description'
+  COMPLETED = 'Completed'
 
   attr_reader :url, :cards
 
-  def initialize()
-    config = load_config()
-    LeanKitKanban::Config.email = config["email"]
-    LeanKitKanban::Config.password = config["password"]
-    LeanKitKanban::Config.account = config["account"]
-    @board_id = config["board_id"]
-    @types = config["card_types"]
-    @completed_lanes = config["completed_lanes"]
-    @lane_id = get_backlog_id(config["backlog_lane_id"]) # TODO - don't do this
-    @url = config["board_url"]
+  def initialize
+    config = load_config
+    LeanKitKanban::Config.email = config['email']
+    LeanKitKanban::Config.password = config['password']
+    LeanKitKanban::Config.account = config['account']
+    @board_id = config['board_id']
+    @types = config['card_types']
+    @completed_lanes = config['completed_lanes']
+    @lane_id = get_backlog_id(config['backlog_lane_id']) # TODO - don't do this
+    @url = config['board_url']
   end
 
   def read_board()
@@ -45,12 +45,12 @@ class KanbanBoard
 
     board = LeanKitKanban::Board.find(@board_id)[0]
     # puts "Looking for cards in board lanes"
-    lanes = board["Lanes"]
+    lanes = board['Lanes']
     lanes.each { |lane| in_progress.concat(read_lane(lane)) }
     # puts "Looking for cards in backlog"
-    backlog.concat(read_lane(board["Backlog"][0]))
+    backlog.concat(read_lane(board['Backlog'][0]))
     # puts "Looking for cards in archive"
-    archive.concat(read_lane(board["Archive"][0]))
+    archive.concat(read_lane(board['Archive'][0]))
 
     @cards.concat(backlog)
     # puts "Found #{@cards.size.to_s} cards in backlog"
@@ -63,7 +63,7 @@ class KanbanBoard
     # puts "Found #{completed_cards.size.to_s} completed cards out of #{@cards.size.to_s} on board"
     completed_cards.each { |c| completed_ids << c[EXTERNAL_CARD_ID] }
 
-    return completed_ids
+    completed_ids
   end
 
   def add_cards(tasks)
@@ -75,14 +75,14 @@ class KanbanBoard
     tasks.each { |task|
       start_date = task[:start_date]
       context = @types[task[:context]]
-      card = { LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
-        EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date],
-        START_DATE => start_date, DESCRIPTION => task[:note] }
+      card = {LANE_ID => @lane_id, TITLE => task[:name], TYPE_ID => context,
+              EXTERNAL_CARD_ID => task[:external_id], PRIORITY => 1, DUE_DATE => task[:due_date],
+              START_DATE => start_date, DESCRIPTION => task[:note]}
 
-      if (card_exists_on_board?(card))
+      if card_exists_on_board?(card)
         # puts "Ignoring pre-existing card " + task[:name]
         presynced_cards = presynced_cards + 1
-      elsif (start_date != nil && Date.parse(start_date) > Date.today)
+      elsif start_date != nil && (Date.parse(start_date) > Date.today)
         puts "Ignoring card " + task[:name] + ". Deferred until " + start_date
         deferred_cards = deferred_cards + 1
       else
@@ -94,7 +94,7 @@ class KanbanBoard
 
     puts "Found #{new_cards.size.to_s} cards to sync (ignoring #{presynced_cards} already on board and #{deferred_cards} deferred)"
 
-    if (new_cards.length > 0)
+    if new_cards.length > 0
       puts "---"
       puts new_cards.to_json
       puts "---"
@@ -107,17 +107,17 @@ class KanbanBoard
   def clear_board()
     # puts "Clearing board..."
     # board = LeanKitKanban::Board.find(@board_id)[0]
-    # board["Lanes"].each { |lane| clear_lane(lane) }
-    # board["Backlog"].each { |lane| clear_lane(lane) }
+    # board['Lanes'].each { |lane| clear_lane(lane) }
+    # board['Backlog'].each { |lane| clear_lane(lane) }
   end
 
   def clear_lane(lane)
     card_ids = []
-    lane["Cards"].each { |card|
+    lane['Cards'].each { |card|
       title = card[TITLE]
-      if (card[EXTERNAL_CARD_ID] != "")
+      if card[EXTERNAL_CARD_ID] != ""
         puts "removing card #{title}"
-        card_ids << card["Id"]
+        card_ids << card['Id']
       else
         puts "ignoring non-omnifocus card #{title}"
       end
@@ -138,28 +138,28 @@ class KanbanBoard
   def read_lane(json)
     lane_title = json[TITLE]
     found_cards = []
-    cards = json["Cards"]
+    cards = json['Cards']
     cards.each { |card|
       id = card[EXTERNAL_CARD_ID]
       title = card[TITLE]
       done = @completed_lanes.include?(card[LANE_ID])
-      found_cards << { EXTERNAL_CARD_ID => id, TITLE => title, COMPLETED => done}
+      found_cards << {EXTERNAL_CARD_ID => id, TITLE => title, COMPLETED => done}
       # puts "\tFound #{id}::#{title} in #{lane_title}. Is card done? #{done}"
     }
 
     # puts "Found #{found_cards.size.to_s} cards  in #{lane_title}"
-    return found_cards
+    found_cards
   end
 
   def load_config()
     path = ENV['HOME'] + "/.leankit-config.yaml"
     config = YAML.load_file(path) rescue nil
 
-    unless config then
-      config = { :email => "Your LeanKit username", :password => "Your LeanKit password",
-        :account => "Your LeanKit account name",
-        :board => "Your LeanKit board ID (copy it from https://<account>.leankit.com/boards/view/<board>)" }
-        # :account => ["Done", "Deployed", "Finished", "Cards in these boards are considered done, you add and remove names to fit your workflow."] }
+    unless config
+      config = {:email => "Your LeanKit username", :password => "Your LeanKit password",
+                :account => "Your LeanKit account name",
+                :board => "Your LeanKit board ID (copy it from https://<account>.leankit.com/boards/view/<board>)"}
+      # :account => ['Done", "Deployed", "Finished", "Cards in these boards are considered done, you add and remove names to fit your workflow.'] }
 
       File.open(path, "w") { |f|
         YAML.dump(config, f)
@@ -168,7 +168,7 @@ class KanbanBoard
       abort "Created default LeanKit config in #{path}. Please complete this before re-running of-kanban"
     end
 
-    return config
+    config
   end
 
   def card_exists_on_board?(card)
@@ -178,15 +178,15 @@ class KanbanBoard
     title_match = false #(@cards.detect { |c| c[TITLE] == title } != nil)
     id_match = (@cards.detect { |c| c[EXTERNAL_CARD_ID] == id } != nil)
 
-    return (title_match || id_match)
+    (title_match || id_match)
   end
 
   def get_backlog_id(id)
-    if (id == nil)
+    if id == nil
       board = LeanKitKanban::Board.find(@board_id)[0]
       puts "No backlog ID specified, looking for default"
-      id = board["Backlog"][0]["Id"]
+      id = board['Backlog'][0]['Id']
     end
-    return id
+    id
   end
 end
