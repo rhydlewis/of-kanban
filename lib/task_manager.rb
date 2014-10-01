@@ -11,8 +11,9 @@ class TaskManager
 
   def flagged_tasks()
     tasks = []
+
     @all_tasks.each { |task|
-      next if (task.completed.get)
+      next if task.completed.get || task.containing_project.get.status.get != :active
 
       if task.flagged.get
         tasks << to_hash(task)
@@ -57,6 +58,26 @@ class TaskManager
         task.completed.set true
       }
     end
+  end
+
+  def projects
+    @omnifocus.all_projects.select { |project|
+      !project.singleton_action_holder.get
+    }
+  end
+
+  def single_action_lists
+    @omnifocus.all_projects.select { |project|
+      status = project.status.get
+      project.singleton_action_holder.get == true && status != :done && status != :dropped
+    }
+  end
+
+  def remaining_projects
+    @omnifocus.all_projects.select { |project|
+      status = project.status.get
+      project.singleton_action_holder.get == false && status != :done && status != :dropped
+    }
   end
 
   def to_hash(task)

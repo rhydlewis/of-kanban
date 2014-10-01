@@ -76,9 +76,8 @@ class OFKanban
     board = KanbanBoard.new
     tasks = []
 
-    completed_ids = board.read_board
-
     if @options.completed
+      completed_ids = board.read_board
       # puts "#{completed_ids.inspect}"
       task_man.close_tasks(completed_ids)
     end
