@@ -13,7 +13,10 @@ class TaskManager
     tasks = []
 
     @all_tasks.each { |task|
-      next if task.completed.get || task.containing_project.get.status.get != :active
+      # next if task.completed.get || task.containing_project.get.status.get != :active
+      next if task.completed.get || !containing_project_active?(task.containing_project)
+
+      # puts "Checking #{task.name.get} (#{task.id_.get})"
 
       if task.flagged.get
         tasks << to_hash(task)
@@ -118,5 +121,25 @@ class TaskManager
       val = nil
     end
     val
+  end
+
+  def containing_project_active?(project)
+    is_active = project.get.status.get == :active
+
+    # puts "Project #{project.name.get} is active? #{is_active}"
+
+    if is_active
+      now = Date.today
+      # puts "Checking if project #{project.name.get} is deferred beyond #{now}"
+      defer_date = ofdate_to_date(project.get.defer_date)
+
+      if defer_date != nil
+        comp = now <=> defer_date
+        # puts "#{now.to_s} > #{defer_date.to_s} (#{comp})"
+        is_active = now >= defer_date
+      end
+    end
+
+    is_active
   end
 end
